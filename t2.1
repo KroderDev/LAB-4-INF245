@@ -1,0 +1,87 @@
+.data
+    prompt_n:       .asciz "Ingresa n: "
+    prompt_k:       .asciz "Ingresa k: "
+    prompt_temp:    .asciz "Ingresa temperatura: "
+    newline:        .asciz "\n"
+
+    temps:      .space 400     # hasta 100 temperaturas
+    sums:       .space 400     # hasta 98 sumas (si k=2)
+
+.text
+.globl main
+
+main:
+    # Leer n
+    li a7, 4
+    la a0, prompt_n
+    ecall
+
+    li a7, 5
+    ecall
+    mv s0, a0    # n
+
+    # Leer k
+    li a7, 4
+    la a0, prompt_k
+    ecall
+
+    li a7, 5
+    ecall
+    mv s1, a0    # k
+
+    # Leer temperaturas
+    li t0, 0                # i = 0
+    la t1, temps            # puntero arreglo temps
+
+read_loop:
+    bge t0, s0, end_read
+
+    li a7, 4
+    la a0, prompt_temp
+    ecall
+
+    li a7, 5
+    ecall                  # resultado en a0
+
+    sw a0, 0(t1)           # guardar a0 en temps[i]
+    addi t1, t1, 4
+    addi t0, t0, 1
+    j read_loop
+
+end_read:
+
+    # Calcular suma de bloques
+    li t0, 0               # i = 0
+    la t1, temps           # base temps
+    la t2, sums            # base sums
+
+    li t3, 4               # constante 4 (en vez de t8)
+
+calc_block_loop:
+    sub t4, s0, s1         # t4 = n - k
+    bgt t0, t4, end_calc   # si i > n-k, salir
+
+    li t1, 0               # j = 0
+    li t2, 0               # suma = 0
+
+block_sum_loop:
+    bge t1, s1, store_sum  # j >= k → guardar suma
+
+    mul t5, t0, t3         # t5 = i * 4
+    mul t6, t1, t3         # t6 = j * 4
+    add t5, t5, t6         # offset total = (i + j) * 4
+    la t6, temps
+    add t5, t5, t6         # dir temps[i+j]
+    lw t6, 0(t5)           # temp = temps[i+j]
+    add t2, t2, t6         # suma += temp
+    addi t1, t1, 1         # j++
+    j block_sum_loop
+
+store_sum:
+    sw t2, 0(s2)           # guardar suma en sums[i]
+    addi s2, s2, 4         # avanzar puntero de sums
+    addi t0, t0, 1         # i++
+    j calc_block_loop
+
+end_calc:
+
